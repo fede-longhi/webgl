@@ -28,33 +28,73 @@
 				trianglesVerticeBuffer = null,
 				trianglesTexCoordBuffer = null;
 
-            var texture = null,
-				textureImage = null;
+            var texture = [],
+                textureImage = [];
+                TEXTURE_1 = 0;
+                TEXTURE_2 = 1;
 
             var mvMatrix = mat4.create();
             var pMatrix = mat4.create();
 
             var angle = 0.01;
 
+            var paused = false,
+                useTexture = false,
+                useLightning = false;
+
+            $(document).keyup(function(evt){
+                switch(evt.keyCode){
+                    case 80: //'p'
+                        paused = !paused;
+                        break;
+                    case 84: //'t'
+                        useTexture = !useTexture;
+                        if(useTexture){
+	                    	gl.uniform1i(glProgram.uDoTexturing, 1);
+	                    }else{
+	                    	gl.uniform1i(glProgram.uDoTexturing, 0);	                    	
+	                    }
+                        break;
+                    default:
+                        break;
+                }
+            });
+
             function loadTexture(){
-				textureImage = new Image();
-				textureImage.onload = function() {
-					setupTexture();
+				textureImage[TEXTURE_1] = new Image();
+				textureImage[TEXTURE_1].onload = function() {
+                    setupTexture(TEXTURE_1);
+                    gl.uniform1i(glProgram.samplerUniform, 0);
 				}
-				textureImage.src = "./resources/textures/brick_1.png";
+                textureImage[TEXTURE_1].src = "./resources/textures/brick_1.png";
+                
+                textureImage[TEXTURE_2] = new Image();
+				textureImage[TEXTURE_2].onload = function() {
+                    setupTexture(TEXTURE_2);
+                    gl.uniform1i(glProgram.samplerUniform2, 1);
+				}
+                textureImage[TEXTURE_2].src = "./resources/textures/t_1.png";
+                
+                glProgram.uDoTexturing = gl.getUniformLocation(glProgram, "uDoTexturing");
+                gl.uniform1i(glProgram.uDoTexturing, 1);
             }
             
-            function setupTexture(){
-                texture = gl.createTexture();
-				gl.bindTexture(gl.TEXTURE_2D, texture);
+            function setupTexture(i){
+                gl.activeTexture(gl.TEXTURE0+i);
+
+
+                texture[i] = gl.createTexture();
+				gl.bindTexture(gl.TEXTURE_2D, texture[i]);
                 gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureImage);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureImage[i]);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-				
-			    gl.uniform1i(glProgram.samplerUniform, 0);
 
-                if(!gl.isTexture(texture)){
+                //glProgram.uDoTexturing = gl.getUniformLocation(glProgram, "uDoTexturing");
+                //console.log(glProgram.uDoTexturing);
+                //gl.uniform1i(glProgram.uDoTexturing, 0);
+
+                if(!gl.isTexture(texture[i])){
                 	console.error("Error: Texture is invalid");
                 }
             }
@@ -75,9 +115,11 @@
                         getMatrixUniforms();
                         loadTexture();
                         (function animLoop(){
-                            setupWebGl();
-                            setMatrixUniforms();
-                            drawScene();
+                            if (!paused){
+                                setupWebGl();
+                                setMatrixUniforms();
+                                drawScene();
+                            }
                             requestAnimationFrame(animLoop, canvas);
                         })();
                     });
@@ -104,7 +146,7 @@
 
             function initShaders(continueInit){
                 var vsFile = 'src/shaders/vs-texture.vs';
-                var fsFile = 'src/shaders/fs-texture.fs';
+                var fsFile = 'src/shaders/fs-multitexture.fs';
 
                 var vs_source;
                 var fs_source;
@@ -206,8 +248,7 @@
 				var triangleVertices = [];	
 				var triangleTexCoords = [];
 
-				for(var i=0; i<triangleVertexIndices.length; ++i)
-				{
+				for(var i=0; i<triangleVertexIndices.length; ++i){
 					var a = triangleVertexIndices[i];
 
 					triangleVertices.push(triangleVerticesOriginal[a*3]);
@@ -250,6 +291,7 @@
                 glProgram.pMatrixUniform = gl.getUniformLocation(glProgram, "uPMatrix");
                 glProgram.mvMatrixUniform = gl.getUniformLocation(glProgram, "uMVMatrix");
                 glProgram.samplerUniform = gl.getUniformLocation(glProgram, "uSampler");
+                glProgram.samplerUniform2 = gl.getUniformLocation(glProgram, "uSampler2");
             }
 
             function setMatrixUniforms(){
