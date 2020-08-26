@@ -11,6 +11,9 @@ $(document).keyup(function(evt){
                 gl.uniform1i(glProgram.uDoTexturing, 0);	                    	
             }
             break;
+        case 76: //'l'
+            useLighting =!useLighting;
+            break;
         default:
             break;
     }
